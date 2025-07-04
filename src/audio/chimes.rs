@@ -2,7 +2,7 @@ use bevy::{platform::collections::HashSet, prelude::*};
 use rand::{Rng, seq::SliceRandom, thread_rng};
 use std::time::Duration;
 
-use crate::audio_events::AudioEvent;
+use crate::audio::AudioEvent;
 
 pub fn chimes_plugin(app: &mut App) {
     app.add_systems(Update, (trigger_chimes, hit_chimes).chain());

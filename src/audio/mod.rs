@@ -1,8 +1,17 @@
 use bevy::prelude::*;
 use std::time::Duration;
 
-pub fn audio_events_plugin(app: &mut App) {
-    app.add_observer(observe_fade_event);
+pub mod chimes;
+pub mod footsteps;
+pub mod music;
+pub mod repeater;
+
+pub fn audio_plugin(app: &mut App) {
+    app.add_plugins(chimes::chimes_plugin)
+        .add_plugins(footsteps::footsteps_plugin)
+        .add_plugins(music::music_plugin)
+        .add_plugins(repeater::repeater_plugin)
+        .add_observer(observe_fade_event);
 }
 
 /// An event to queue playback.

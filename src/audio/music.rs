@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::audio_events::AudioEvent;
+use crate::audio::AudioEvent;
 
 pub fn music_plugin(app: &mut App) {
     app.add_observer(play_music);

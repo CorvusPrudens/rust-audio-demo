@@ -1,9 +1,8 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 use rand::{Rng, seq::SliceRandom};
+use std::time::Duration;
 
-use crate::{audio_events::AudioEvent, repeater::SoundRepeater};
+use crate::audio::{AudioEvent, repeater::SoundRepeater};
 
 pub fn footsteps_plugin(app: &mut App) {
     app.add_observer(toggle_walking);

@@ -1,8 +1,7 @@
+use bevy::prelude::*;
 use std::time::Duration;
 
-use bevy::prelude::*;
-
-use crate::audio_events::AudioEvent;
+use crate::audio::AudioEvent;
 
 pub fn repeater_plugin(app: &mut App) {
     app.add_systems(Update, handle_repeaters);

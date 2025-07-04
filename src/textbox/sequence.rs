@@ -7,7 +7,7 @@ use bevy_sequence::{
 use rand::Rng;
 use std::{marker::PhantomData, time::Duration};
 
-use crate::audio_events::AudioEvent;
+use crate::audio::AudioEvent;
 
 pub fn sequence_plugin(app: &mut App) {
     app.insert_resource(Character {

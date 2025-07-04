@@ -1,9 +1,10 @@
-use crate::audio_events::{AudioEvent, VolumeFade};
 use bevy::{platform::collections::HashMap, prelude::*};
 use rodio::{
     DeviceTrait, Sink, Source, SpatialSink, buffer::SamplesBuffer, cpal::traits::HostTrait,
 };
 use walkdir::WalkDir;
+
+use crate::audio::{AudioEvent, VolumeFade};
 
 pub struct RodioPlugin;
 

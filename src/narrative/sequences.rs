@@ -1,18 +1,18 @@
-use crate::{
-    audio_events::{AudioEvent, VolumeFadeEvent},
-    chimes::{ChimesEnable, ChimesTimer},
-    footsteps::WalkEvent,
-    music::MusicEvent,
-};
-
-use super::sequence::{CharacterFragment, despawn_textbox, dynamic};
 use bevy::{color::palettes, prelude::*, time::Stopwatch};
 use bevy_pretty_text::style::StyleAppExt;
 use bevy_sequence::prelude::{FragmentExt, IntoFragment, spawn_root};
 
-use super::sequence::AudioSequence;
+use crate::{
+    audio::{
+        AudioEvent, VolumeFadeEvent,
+        chimes::{ChimesEnable, ChimesTimer},
+        footsteps::WalkEvent,
+        music::MusicEvent,
+    },
+    textbox::sequence::{AudioSequence, CharacterFragment, despawn_textbox, dynamic},
+};
 
-pub fn dialog_plugin(app: &mut App) {
+pub fn sequences_plugin(app: &mut App) {
     app.add_systems(Startup, |mut commands: Commands| {
         spawn_root(demo().always().once(), &mut commands);
     })

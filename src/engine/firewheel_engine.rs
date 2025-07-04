@@ -14,7 +14,7 @@ use firewheel::{
 use std::{sync::Arc, time::Duration};
 use walkdir::WalkDir;
 
-use crate::audio_events::{AudioEvent, VolumeFade};
+use crate::audio::{AudioEvent, VolumeFade};
 
 pub struct FirewheelPlugin;
 

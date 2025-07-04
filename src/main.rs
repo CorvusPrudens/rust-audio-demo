@@ -1,15 +1,9 @@
-use std::time::Duration;
-
-use bevy::{ecs::schedule::ExecutorKind, prelude::*};
+use bevy::prelude::*;
 use clap::{Parser, ValueEnum};
-use rand::Rng;
 
-mod audio_events;
-mod chimes;
+mod audio;
 mod engine;
-mod footsteps;
-mod music;
-mod repeater;
+mod narrative;
 mod textbox;
 
 /// Evaluate the Firewheel and `rodio` audio engines
@@ -51,12 +45,11 @@ fn main() {
                     ..Default::default()
                 })
                 .set(ImagePlugin::default_linear()),
-            chimes::chimes_plugin,
-            repeater::repeater_plugin,
-            footsteps::footsteps_plugin,
-            music::music_plugin,
+            // This helps minimize the potential for input latency
+            bevy_framepace::FramepacePlugin,
+            audio::audio_plugin,
             textbox::textbox_plugin,
-            audio_events::audio_events_plugin,
+            narrative::narrative_plugin,
         ));
 
     match args.engine {
@@ -69,53 +62,7 @@ fn main() {
     }
 
     app.add_systems(Startup, |mut commands: Commands| {
-        commands.trigger(audio_events::AudioEvent {
-            sample: "pine_trees.ogg",
-            looping: true,
-            name: Some("pine"),
-            volume: 0.0,
-            ..Default::default()
-        });
-
-        commands.trigger(audio_events::VolumeFadeEvent {
-            name: "pine",
-            start: 0.0,
-            end: 1.1,
-            seconds: 3.0,
-        });
-
-        commands.trigger(audio_events::AudioEvent {
-            sample: "nightingale.ogg",
-            looping: true,
-            position: Some(Vec2::new(15.0, 10.0)),
-            ..Default::default()
-        });
-
-        commands.spawn(repeater::SoundRepeater::new(
-            || audio_events::AudioEvent {
-                sample: "caw.ogg",
-                position: Some(Vec2::new(-15.0, 15.0)),
-                ..Default::default()
-            },
-            || {
-                let mut rng = rand::thread_rng();
-                let duration = rng.gen_range(10.0..25.0);
-
-                Duration::from_secs_f32(duration)
-            },
-        ));
-
         commands.spawn(Camera2d);
-    })
-    // Just to simplify things a bit, we'll do single-threaded execution.
-    .edit_schedule(PreUpdate, |schedule| {
-        schedule.set_executor_kind(ExecutorKind::SingleThreaded);
-    })
-    .edit_schedule(Update, |schedule| {
-        schedule.set_executor_kind(ExecutorKind::SingleThreaded);
-    })
-    .edit_schedule(PostUpdate, |schedule| {
-        schedule.set_executor_kind(ExecutorKind::SingleThreaded);
     })
     .run();
 }

@@ -9,6 +9,7 @@ mod engine;
 mod footsteps;
 mod music;
 mod repeater;
+mod textbox;
 
 /// Evaluate the Firewheel and `rodio` audio engines
 #[derive(Parser, Debug)]
@@ -32,26 +33,29 @@ fn main() {
 
     let mut app = App::new();
 
-    app.add_plugins((
-        DefaultPlugins
-            .set(TaskPoolPlugin {
-                task_pool_options: TaskPoolOptions {
-                    max_total_threads: 1,
+    app.insert_resource(ClearColor(Color::srgb(0.1, 0.1, 0.1)))
+        .add_plugins((
+            DefaultPlugins
+                .set(TaskPoolPlugin {
+                    task_pool_options: TaskPoolOptions {
+                        max_total_threads: 1,
+                        ..Default::default()
+                    },
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "night in a pine forest".into(),
+                        ..Default::default()
+                    }),
                     ..Default::default()
-                },
-            })
-            .set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "night in a pine forest".into(),
-                    ..Default::default()
-                }),
-                ..Default::default()
-            }),
-        chimes::chimes_plugin,
-        repeater::repeater_plugin,
-        footsteps::footsteps_plugin,
-        music::music_plugin,
-    ));
+                })
+                .set(ImagePlugin::default_linear()),
+            chimes::chimes_plugin,
+            repeater::repeater_plugin,
+            footsteps::footsteps_plugin,
+            music::music_plugin,
+            textbox::textbox_plugin,
+        ));
 
     match args.engine {
         Engine::Firewheel => {
@@ -89,6 +93,8 @@ fn main() {
                 Duration::from_secs_f32(duration)
             },
         ));
+
+        commands.spawn(Camera2d);
     })
     // Just to simplify things a bit, we'll do single-threaded execution.
     .edit_schedule(PreUpdate, |schedule| {

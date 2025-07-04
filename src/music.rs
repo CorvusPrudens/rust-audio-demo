@@ -9,14 +9,14 @@ pub fn music_plugin(app: &mut App) {
 #[derive(Event)]
 pub struct MusicEvent;
 
-fn play_music(trigger: Trigger<MusicEvent>, mut commands: Commands, mut is_playing: Local<bool>) {
+fn play_music(_: Trigger<MusicEvent>, mut commands: Commands, mut is_playing: Local<bool>) {
     if *is_playing {
         return;
     }
 
     *is_playing = true;
     commands.trigger(AudioEvent {
-        sample: "luna.ogg",
+        sample: "aster.ogg",
         volume: 0.40,
         speed: 0.80,
         looping: true,

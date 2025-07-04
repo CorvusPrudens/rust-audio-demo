@@ -5,21 +5,29 @@ edition = "2024"
 
 [dependencies]
 bevy = { version = "0.16.1", default-features = false, features = [
+  "bevy_asset",
   "bevy_color",
   "bevy_core_pipeline",
   "bevy_gilrs",
+  "bevy_gltf",
+  "bevy_mesh_picking_backend",
+  "bevy_pbr",
+  "bevy_picking",
   "bevy_render",
   "bevy_scene",
   "bevy_sprite",
+  "bevy_sprite_picking_backend",
   "bevy_state",
   "bevy_text",
-  "bevy_ui",
   "bevy_log",
+  "bevy_ui",
   "bevy_ui_picking_backend",
   "configurable_error_handler",
   "bevy_window",
   "bevy_winit",
   "default_font",
+  "multi_threaded",
+  "png",
   "smaa_luts",
   "sysinfo_plugin",
   "tonemapping_luts",
@@ -33,6 +41,9 @@ rodio = "0.20.1"
 clap = { version = "4.5.40", features = ["derive"] }
 rand = "0.8"
 walkdir = "2.5.0"
+# bevy_pretty_text = { git = "https://github.com/void-scape/bevy_pretty_text.git", commit = "2fe7bc6713cb4d01e989e5bf6c8d1808e2aeef5f" }
+bevy_pretty_text = { git = "https://github.com/void-scape/bevy_pretty_text", commit = "a61f911e5f2baa38f655bdf924afe818db1cefe9" }
+bevy_sequence = { git = "https://github.com/CorvusPrudens/bevy_sequence.git", commit = "c484472f940176762b5967d0794e1aa9b5c8c9eb" }
 
 [profile.dev.package."*"]
 opt-level = 3

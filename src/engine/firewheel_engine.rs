@@ -19,7 +19,7 @@ impl Plugin for FirewheelPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(initialize_firewheel)
             .add_systems(PreStartup, load_samples)
-            .add_systems(PostUpdate, (monitor_workers, update_firewheel).chain())
+            .add_systems(Last, (monitor_workers, update_firewheel).chain())
             .add_observer(handle_sample_event);
     }
 }

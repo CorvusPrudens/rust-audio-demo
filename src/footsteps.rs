@@ -6,7 +6,13 @@ use rand::{Rng, seq::SliceRandom};
 use crate::{AudioEvent, music::MusicEvent, repeater::SoundRepeater};
 
 pub fn footsteps_plugin(app: &mut App) {
-    app.add_systems(Update, toggle_walking);
+    // app.add_systems(Update, );
+    app.add_observer(toggle_walking);
+}
+
+#[derive(Event, Default)]
+pub struct WalkEvent {
+    pub volume: f32,
 }
 
 #[derive(Component)]
@@ -24,50 +30,99 @@ const FOOTSTEPS: &[&str] = &[
 ];
 
 fn toggle_walking(
-    keys: Res<ButtonInput<KeyCode>>,
+    trigger: Trigger<WalkEvent>,
     walking: Query<Entity, With<Footsteps>>,
     mut commands: Commands,
 ) {
-    if keys.just_pressed(KeyCode::KeyW) {
-        match walking.single() {
-            Ok(walking) => {
-                commands.entity(walking).despawn();
-            }
-            Err(_) => {
-                let mut last_sound = FOOTSTEPS[0];
-                let mut next_sound = move || {
+    match walking.single() {
+        Ok(walking) => {
+            commands.entity(walking).despawn();
+        }
+        Err(_) => {
+            let mut last_sound = FOOTSTEPS[0];
+            let volume = trigger.volume;
+            let mut next_sound = move || {
+                let mut rng = rand::thread_rng();
+
+                let speed = rng.gen_range(0.95..1.05);
+
+                let options = FOOTSTEPS
+                    .iter()
+                    .filter(|s| **s != last_sound)
+                    .collect::<Vec<_>>();
+
+                let sample = **options.choose(&mut rng).unwrap();
+                last_sound = sample;
+
+                AudioEvent {
+                    sample,
+                    speed,
+                    volume,
+                    ..Default::default()
+                }
+            };
+
+            commands.trigger(next_sound());
+            // commands.trigger(MusicEvent);
+
+            commands.spawn((
+                Footsteps,
+                SoundRepeater::new(next_sound, || {
                     let mut rng = rand::thread_rng();
+                    let delay = rng.gen_range(0.9..1.1);
 
-                    let speed = rng.gen_range(0.95..1.05);
-
-                    let options = FOOTSTEPS
-                        .iter()
-                        .filter(|s| **s != last_sound)
-                        .collect::<Vec<_>>();
-
-                    let sample = **options.choose(&mut rng).unwrap();
-                    last_sound = sample;
-
-                    AudioEvent {
-                        sample,
-                        speed,
-                        ..Default::default()
-                    }
-                };
-
-                commands.trigger(next_sound());
-                commands.trigger(MusicEvent);
-
-                commands.spawn((
-                    Footsteps,
-                    SoundRepeater::new(next_sound, || {
-                        let mut rng = rand::thread_rng();
-                        let delay = rng.gen_range(0.9..1.1);
-
-                        Duration::from_secs_f32(delay)
-                    }),
-                ));
-            }
+                    Duration::from_secs_f32(delay)
+                }),
+            ));
         }
     }
 }
+
+// fn toggle_walking(
+//     keys: Res<ButtonInput<KeyCode>>,
+//     walking: Query<Entity, With<Footsteps>>,
+//     mut commands: Commands,
+// ) {
+//     if keys.just_pressed(KeyCode::KeyW) {
+//         match walking.single() {
+//             Ok(walking) => {
+//                 commands.entity(walking).despawn();
+//             }
+//             Err(_) => {
+//                 let mut last_sound = FOOTSTEPS[0];
+//                 let mut next_sound = move || {
+//                     let mut rng = rand::thread_rng();
+//
+//                     let speed = rng.gen_range(0.95..1.05);
+//
+//                     let options = FOOTSTEPS
+//                         .iter()
+//                         .filter(|s| **s != last_sound)
+//                         .collect::<Vec<_>>();
+//
+//                     let sample = **options.choose(&mut rng).unwrap();
+//                     last_sound = sample;
+//
+//                     AudioEvent {
+//                         sample,
+//                         speed,
+//                         ..Default::default()
+//                     }
+//                 };
+//
+//                 commands.trigger(next_sound());
+//                 commands.trigger(MusicEvent);
+//
+//                 commands.spawn((
+//                     Footsteps,
+//                     SoundRepeater::new(next_sound, || {
+//                         let mut rng = rand::thread_rng();
+//                         let delay = rng.gen_range(0.9..1.1);
+//
+//                         Duration::from_secs_f32(delay)
+//                     }),
+//                 ));
+//             }
+//         }
+//     }
+// }

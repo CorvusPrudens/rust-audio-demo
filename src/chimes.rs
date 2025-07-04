@@ -1,12 +1,15 @@
-use bevy::{input::keyboard::KeyboardInput, platform::collections::HashSet, prelude::*};
+use bevy::{platform::collections::HashSet, prelude::*};
 use rand::{Rng, seq::SliceRandom, thread_rng};
 use std::time::Duration;
 
-use crate::AudioEvent;
+use crate::audio_events::AudioEvent;
 
 pub fn chimes_plugin(app: &mut App) {
     app.add_systems(Update, (trigger_chimes, hit_chimes).chain());
 }
+
+#[derive(Component)]
+pub struct ChimesEnable;
 
 #[derive(Component)]
 pub struct ChimesTimer {
@@ -20,22 +23,16 @@ pub struct ChimesTimer {
 const CHIMES: &[&str] = &[
     "chimes/chime-d1.ogg",
     "chimes/chime-d2.ogg",
-    "chimes/chime-d3.ogg",
     "chimes/chime-e1.ogg",
     "chimes/chime-e2.ogg",
-    "chimes/chime-e3.ogg",
     "chimes/chime-f1.ogg",
     "chimes/chime-f2.ogg",
-    "chimes/chime-f3.ogg",
     "chimes/chime-a1.ogg",
     "chimes/chime-a2.ogg",
-    "chimes/chime-a3.ogg",
     "chimes/chime-b1.ogg",
     "chimes/chime-b2.ogg",
-    "chimes/chime-b3.ogg",
     "chimes/chime-d4.ogg",
     "chimes/chime-d5.ogg",
-    "chimes/chime-d6.ogg",
 ];
 
 impl ChimesTimer {
@@ -52,7 +49,11 @@ impl ChimesTimer {
     }
 }
 
-fn trigger_chimes(keys: Res<ButtonInput<KeyCode>>, mut commands: Commands) {
+fn trigger_chimes(
+    _: Single<(), With<ChimesEnable>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+) {
     if keys.just_pressed(KeyCode::KeyC) {
         commands.spawn(ChimesTimer::new(0.6, Vec2::new(10.0, 10.0)));
     }
@@ -69,8 +70,8 @@ fn hit_chimes(
             timer.initial = false;
             let mut rng = thread_rng();
 
-            timer.amplitude -= 0.05;
-            let new_duration = rng.gen_range(0.1..0.4);
+            timer.amplitude -= 0.03;
+            let new_duration = rng.gen_range(0.1..0.3);
             timer
                 .timer
                 .set_duration(Duration::from_secs_f32(new_duration));
@@ -96,6 +97,7 @@ fn hit_chimes(
                 sample: CHIMES[next_sample],
                 position: Some(timer.position),
                 volume: timer.amplitude * 2.0,
+                speed: 0.9,
                 ..Default::default()
             });
         }

@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::AudioEvent;
+use crate::audio_events::AudioEvent;
 
 pub fn repeater_plugin(app: &mut App) {
     app.add_systems(Update, handle_repeaters);
@@ -39,4 +39,3 @@ fn handle_repeaters(mut q: Query<&mut SoundRepeater>, mut commands: Commands, ti
         }
     }
 }
-

@@ -1,11 +1,13 @@
-use std::time::Duration;
-
 use bevy::{prelude::*, sprite::Anchor, text::TextBounds};
 use bevy_pretty_text::prelude::*;
-use bevy_sequence::{fragment::DataLeaf, prelude::*};
+use bevy_sequence::{
+    fragment::{DataLeaf, event::InsertBeginDown},
+    prelude::*,
+};
 use rand::Rng;
+use std::{marker::PhantomData, time::Duration};
 
-use crate::AudioEvent;
+use crate::audio_events::AudioEvent;
 
 pub fn sequence_plugin(app: &mut App) {
     app.insert_resource(Character {
@@ -38,7 +40,7 @@ fn observe_typewriter(
     commands.trigger(AudioEvent {
         sample: character.text_sound,
         speed: rng.gen_range(0.95..1.05),
-        volume: 0.75,
+        volume: 0.5,
         ..Default::default()
     });
 }
@@ -102,11 +104,48 @@ impl IntoFragment<AudioSequence> for f32 {
     }
 }
 
+pub struct DynamicText<S, O, M> {
+    system: S,
+    marker: PhantomData<fn() -> (O, M)>,
+}
+
+pub fn dynamic<S, O, M>(system: S) -> DynamicText<S, O, M>
+where
+    S: IntoSystem<(), O, M>,
+{
+    DynamicText {
+        system,
+        marker: PhantomData,
+    }
+}
+
+impl<S, O, M> IntoFragment<AudioSequence> for DynamicText<S, O, M>
+where
+    S: IntoSystem<(), String, M> + Send + 'static,
+{
+    fn into_fragment(self, _: &Context<()>, commands: &mut Commands) -> FragmentId {
+        let system = commands.register_system(self.system);
+        let id = commands
+            .spawn(bevy_sequence::fragment::Leaf)
+            .insert_begin_down(move |event, world| {
+                let string = world.run_system(system).unwrap();
+
+                world.send_event(FragmentEvent {
+                    id: event.id,
+                    data: AudioSequence::Text(string),
+                });
+            })
+            .id();
+
+        FragmentId::new(id)
+    }
+}
+
 #[derive(Component)]
 struct Textbox(FragmentEndEvent);
 
 #[derive(Component)]
-struct TextboxContainer;
+pub struct TextboxContainer;
 
 #[derive(Component)]
 struct TextboxName;
@@ -136,6 +175,12 @@ fn textbox_handler(
         if let Ok(triangle) = triangle.single() {
             commands.entity(triangle).despawn();
         }
+
+        commands.trigger(AudioEvent {
+            sample: "click.ogg",
+            volume: 0.9,
+            ..Default::default()
+        });
     }
 }
 
@@ -194,18 +239,10 @@ where
 
 impl<T> CharacterFragment for T where T: IntoFragment<AudioSequence> {}
 
-/// Ensure the textbox is despanwed after a sequence ends.
-pub fn spawn_textbox_sequence(seq: impl IntoFragment<AudioSequence>, commands: &mut Commands) {
-    spawn_root(
-        seq.always().once().on_end(
-            |container: Query<Entity, With<TextboxContainer>>, mut commands: Commands| {
-                if let Ok(container) = container.single() {
-                    commands.entity(container).despawn();
-                }
-            },
-        ),
-        commands,
-    );
+pub fn despawn_textbox(container: Query<Entity, With<TextboxContainer>>, mut commands: Commands) {
+    if let Ok(container) = container.single() {
+        commands.entity(container).despawn();
+    }
 }
 
 fn sequence_runner(
@@ -230,11 +267,11 @@ fn sequence_runner(
                 let textbox_size = Vec2::new(500.0, 150.0);
 
                 let container = container.single().unwrap_or_else(|_| {
-                    commands
+                    let container = commands
                         .spawn((
                             TextboxContainer,
                             Sprite {
-                                image: server.load("textbox.png"),
+                                image: server.load("textbox2.png"),
                                 ..Default::default()
                             },
                             Transform {
@@ -242,7 +279,16 @@ fn sequence_runner(
                                 ..Default::default()
                             },
                         ))
-                        .id()
+                        .id();
+
+                    commands.spawn((
+                        ChildOf(container),
+                        TextboxName,
+                        Anchor::BottomLeft,
+                        Transform::from_xyz(-textbox_size.x / 2.0, textbox_size.y / 2.0, 0.0),
+                    ));
+
+                    container
                 });
 
                 let x_margin = 0.05;
@@ -290,13 +336,6 @@ fn sequence_runner(
                             ));
                         },
                     );
-
-                commands.spawn((
-                    ChildOf(container),
-                    TextboxName,
-                    Anchor::BottomLeft,
-                    Transform::from_xyz(-textbox_size.x / 2.0, textbox_size.y / 2.0, 0.0),
-                ));
             }
         }
     }
@@ -323,17 +362,23 @@ fn animate_triangle(mut triangle: Query<(&mut Transform, &mut Triangle)>, time: 
 }
 
 fn update_name(
-    names: Query<Entity, With<TextboxName>>,
+    mut names: Query<(Entity, Option<&mut Text2d>), With<TextboxName>>,
     character: Res<Character>,
     mut commands: Commands,
 ) {
-    for name in &names {
-        match character.name {
-            Some(name_string) => {
+    for (name, text) in &mut names {
+        match (character.name, text) {
+            (Some(name_string), Some(mut text)) => {
+                text.clear();
+                *text = name_string.into();
+            }
+            (Some(name_string), None) => {
                 commands.entity(name).insert(Text2d::new(name_string));
             }
-            None => {
-                commands.entity(name).remove_with_requires::<Text2d>();
+            (None, _) => {
+                commands
+                    .entity(name)
+                    .remove::<(Text2d, TextLayout, TextFont, TextColor, TextBounds)>();
             }
         }
     }

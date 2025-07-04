@@ -949,7 +949,7 @@ dependencies = [
 [[package]]
 name = "bevy_pretty_text"
 version = "0.1.0"
-source = "git+https://github.com/void-scape/bevy_pretty_text#a61f911e5f2baa38f655bdf924afe818db1cefe9"
+source = "git+https://github.com/void-scape/bevy_pretty_text#32f474abda6773427c60e1d22b4c26bef1ddbd35"
 dependencies = [
  "bevy",
  "pretty_text",
@@ -3740,7 +3740,7 @@ checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
 [[package]]
 name = "pretty_text"
 version = "0.1.0"
-source = "git+https://github.com/void-scape/bevy_pretty_text#a61f911e5f2baa38f655bdf924afe818db1cefe9"
+source = "git+https://github.com/void-scape/bevy_pretty_text#32f474abda6773427c60e1d22b4c26bef1ddbd35"
 dependencies = [
  "bevy",
  "proc-macro2",
@@ -3751,7 +3751,7 @@ dependencies = [
 [[package]]
 name = "pretty_text_effects"
 version = "0.1.0"
-source = "git+https://github.com/void-scape/bevy_pretty_text#a61f911e5f2baa38f655bdf924afe818db1cefe9"
+source = "git+https://github.com/void-scape/bevy_pretty_text#32f474abda6773427c60e1d22b4c26bef1ddbd35"
 dependencies = [
  "bevy",
  "pretty_text",
@@ -3762,7 +3762,7 @@ dependencies = [
 [[package]]
 name = "pretty_text_macros"
 version = "0.1.0"
-source = "git+https://github.com/void-scape/bevy_pretty_text#a61f911e5f2baa38f655bdf924afe818db1cefe9"
+source = "git+https://github.com/void-scape/bevy_pretty_text#32f474abda6773427c60e1d22b4c26bef1ddbd35"
 dependencies = [
  "bevy_macro_utils",
  "pretty_text",

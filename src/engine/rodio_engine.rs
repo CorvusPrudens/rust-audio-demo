@@ -1,4 +1,4 @@
-use crate::AudioEvent;
+use crate::audio_events::{AudioEvent, VolumeFade};
 use bevy::{platform::collections::HashMap, prelude::*};
 use rodio::{
     DeviceTrait, Sink, Source, SpatialSink, buffer::SamplesBuffer, cpal::traits::HostTrait,
@@ -11,7 +11,7 @@ impl Plugin for RodioPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(initialize_rodio)
             .add_systems(PreStartup, load_samples)
-            .add_systems(Update, monitor_sinks)
+            .add_systems(Update, (apply_fades, monitor_sinks).chain())
             .add_observer(handle_sample_event);
     }
 }
@@ -101,7 +101,7 @@ fn handle_sample_event(
     // This makes both engines sound the same in terms of volume.
     let volume = firewheel::Volume::Linear(trigger.volume).amp();
 
-    match trigger.position {
+    let mut new_sound = match trigger.position {
         Some(position) => {
             // here, we massage the distance so this sounds equivalent to firewheel
             let real_distance = position.length();
@@ -124,9 +124,8 @@ fn handle_sample_event(
                 sink.append(sample);
             }
 
-            commands.spawn(SpatialRodioSink(sink));
+            commands.spawn(SpatialRodioSink(sink))
         }
-
         None => {
             let sink = Sink::try_new(&context.0)?;
             sink.set_volume(volume);
@@ -138,8 +137,12 @@ fn handle_sample_event(
                 sink.append(sample);
             }
 
-            commands.spawn(BasicRodioSink(sink));
+            commands.spawn(BasicRodioSink(sink))
         }
+    };
+
+    if let Some(name) = trigger.name {
+        new_sound.insert(Name::new(name));
     }
 
     Ok(())
@@ -161,4 +164,44 @@ fn monitor_sinks(
             commands.entity(entity).despawn();
         }
     }
+}
+
+fn apply_fades(
+    mut basic_sinks: Query<(Entity, &BasicRodioSink, &mut VolumeFade), Without<SpatialRodioSink>>,
+    mut spatial_sinks: Query<(Entity, &SpatialRodioSink, &mut VolumeFade), Without<BasicRodioSink>>,
+    mut commands: Commands,
+    time: Res<Time>,
+) -> Result {
+    let delta = time.delta();
+
+    for (entity, sink, mut fade) in &mut basic_sinks {
+        fade.timer.tick(delta);
+        let elapsed = fade.timer.elapsed_secs() / fade.timer.duration().as_secs_f32();
+
+        // again, this just ensures both engines sound roughly the same
+        let volume =
+            firewheel::Volume::Linear(fade.event.start.lerp(fade.event.end, elapsed)).amp();
+
+        sink.0.set_volume(volume);
+
+        if fade.timer.finished() {
+            commands.entity(entity).remove::<VolumeFade>();
+        }
+    }
+
+    for (entity, sink, mut fade) in &mut spatial_sinks {
+        fade.timer.tick(delta);
+        let elapsed = fade.timer.elapsed_secs() / fade.timer.duration().as_secs_f32();
+
+        let volume =
+            firewheel::Volume::Linear(fade.event.start.lerp(fade.event.end, elapsed)).amp();
+
+        sink.0.set_volume(volume);
+
+        if fade.timer.finished() {
+            commands.entity(entity).remove::<VolumeFade>();
+        }
+    }
+
+    Ok(())
 }

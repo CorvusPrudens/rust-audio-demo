@@ -4,14 +4,17 @@ use firewheel::{
     channel_config::NonZeroChannelCount,
     collector::ArcGc,
     diff::{Diff, Notify},
-    nodes::sampler::{PlaybackState, RepeatMode, SamplerConfig, SamplerNode, SequenceType},
+    nodes::{
+        sampler::{PlaybackState, RepeatMode, SamplerConfig, SamplerNode, SequenceType},
+        volume::{VolumeNode, VolumeNodeConfig},
+    },
     sample_resource::SampleResource,
     sampler_pool::{FxChain, SamplerPool, SpatialBasicChain, WorkerID},
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use walkdir::WalkDir;
 
-use crate::AudioEvent;
+use crate::audio_events::{AudioEvent, VolumeFade};
 
 pub struct FirewheelPlugin;
 
@@ -19,7 +22,16 @@ impl Plugin for FirewheelPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(initialize_firewheel)
             .add_systems(PreStartup, load_samples)
-            .add_systems(Last, (monitor_workers, update_firewheel).chain())
+            .add_systems(
+                Last,
+                (
+                    monitor_workers,
+                    apply_volume_fade,
+                    apply_spatial_fade,
+                    update_firewheel,
+                )
+                    .chain(),
+            )
             .add_observer(handle_sample_event);
     }
 }
@@ -28,7 +40,7 @@ impl Plugin for FirewheelPlugin {
 struct SpatialPool(SamplerPool<SpatialBasicChain>);
 
 #[derive(Resource)]
-struct BasicPool(SamplerPool<EmptyChain>);
+struct VolumePool(SamplerPool<VolumeChain>);
 
 /// Here we initialize the Firewheel audio engine.
 fn initialize_firewheel(app: &mut App) {
@@ -64,7 +76,7 @@ fn initialize_firewheel(app: &mut App) {
     );
 
     app.insert_non_send_resource(context)
-        .insert_resource(BasicPool(basic))
+        .insert_resource(VolumePool(basic))
         .insert_resource(SpatialPool(spatial));
 }
 
@@ -114,7 +126,7 @@ pub struct SampleMap(HashMap<String, ArcGc<dyn SampleResource>>);
 fn handle_sample_event(
     trigger: Trigger<AudioEvent>,
     mut spatial: ResMut<SpatialPool>,
-    mut basic: ResMut<BasicPool>,
+    mut basic: ResMut<VolumePool>,
     mut context: NonSendMut<FirewheelContext>,
     samples: Res<SampleMap>,
     mut commands: Commands,
@@ -134,7 +146,7 @@ fn handle_sample_event(
     let params = SamplerNode {
         sequence: Notify::new(Some(SequenceType::SingleSample {
             sample,
-            volume: Volume::Linear(trigger.volume),
+            volume: Volume::Linear(1.0),
             repeat_mode,
         })),
         speed: trigger.speed as f64,
@@ -142,74 +154,108 @@ fn handle_sample_event(
         ..Default::default()
     };
 
-    if let Some(position) = trigger.position {
-        let worker = spatial
-            .0
-            .new_worker(&params, false, &mut context, |fx_chain_state, cx| {
-                let baseline = fx_chain_state.fx_chain.spatial_basic;
+    let mut new_sound = match trigger.position {
+        Some(position) => {
+            let worker =
+                spatial
+                    .0
+                    .new_worker(&params, false, &mut context, |fx_chain_state, cx| {
+                        let baseline = fx_chain_state.fx_chain.spatial_basic;
 
-                fx_chain_state.fx_chain.spatial_basic.offset =
-                    Vec3::new(position.x, 0.0, position.y);
+                        fx_chain_state.fx_chain.spatial_basic.offset =
+                            Vec3::new(position.x, 0.0, position.y);
+                        fx_chain_state.fx_chain.spatial_basic.volume =
+                            Volume::Linear(trigger.volume);
 
-                let mut queue = Vec::new();
-                baseline.diff(
-                    &fx_chain_state.fx_chain.spatial_basic,
-                    Default::default(),
-                    &mut queue,
-                );
+                        fx_chain_state.fx_chain.spatial_basic.diff(
+                            &baseline,
+                            Default::default(),
+                            &mut cx.event_queue(fx_chain_state.node_ids[0]),
+                        );
+                    })?;
 
-                fx_chain_state.fx_chain.spatial_basic.diff(
-                    &baseline,
-                    Default::default(),
-                    &mut cx.event_queue(fx_chain_state.node_ids[0]),
-                );
-            })?;
+            commands.spawn(SpatialWorker {
+                id: worker.worker_id,
+                timer: Timer::new(Duration::from_millis(250), TimerMode::Once),
+            })
+        }
+        None => {
+            let worker =
+                basic
+                    .0
+                    .new_worker(&params, true, &mut context, |fx_chain_state, cx| {
+                        let baseline = fx_chain_state.fx_chain.volume;
+                        fx_chain_state.fx_chain.volume.volume = Volume::Linear(trigger.volume);
 
-        commands.spawn(SpatialWorker(worker.worker_id));
-    } else {
-        let worker = basic.0.new_worker(&params, true, &mut context, |_, _| ())?;
+                        fx_chain_state.fx_chain.volume.diff(
+                            &baseline,
+                            Default::default(),
+                            &mut cx.event_queue(fx_chain_state.node_ids[0]),
+                        );
+                    })?;
 
-        commands.spawn(BasicWorker(worker.worker_id));
+            commands.spawn(VolumeWorker {
+                id: worker.worker_id,
+                timer: Timer::new(Duration::from_millis(250), TimerMode::Once),
+            })
+        }
+    };
+
+    if let Some(name) = trigger.name {
+        new_sound.insert(Name::new(name));
     }
 
     Ok(())
 }
 
 #[derive(Component)]
-struct SpatialWorker(WorkerID);
+struct SpatialWorker {
+    id: WorkerID,
+    timer: Timer,
+}
 
 #[derive(Component)]
-struct BasicWorker(WorkerID);
+struct VolumeWorker {
+    id: WorkerID,
+    timer: Timer,
+}
 
 fn monitor_workers(
-    spatial: Query<(Entity, &SpatialWorker)>,
-    basic: Query<(Entity, &BasicWorker)>,
+    mut spatial: Query<(Entity, &mut SpatialWorker)>,
+    mut basic: Query<(Entity, &mut VolumeWorker)>,
 
     mut spatial_pool: ResMut<SpatialPool>,
-    mut basic_pool: ResMut<BasicPool>,
+    mut basic_pool: ResMut<VolumePool>,
     mut context: NonSendMut<FirewheelContext>,
 
+    time: Res<Time>,
     mut commands: Commands,
 ) {
-    for (entity, worker) in &spatial {
-        if spatial_pool.0.stopped(worker.0, &context) {
-            spatial_pool.0.stop(worker.0, &mut context);
+    let delta = time.delta();
+
+    for (entity, mut worker) in &mut spatial {
+        // We allow each worker some time to flush its sequence to the audio graph.
+        // This is handled much more robustly in `bevy_seedling`.
+        if worker.timer.tick(delta).finished() && spatial_pool.0.stopped(worker.id, &context) {
+            spatial_pool.0.stop(worker.id, &mut context);
             commands.entity(entity).despawn();
         }
     }
 
-    for (entity, worker) in &basic {
-        if basic_pool.0.stopped(worker.0, &context) {
-            basic_pool.0.stop(worker.0, &mut context);
+    for (entity, mut worker) in &mut basic {
+        if worker.timer.tick(delta).finished() && basic_pool.0.stopped(worker.id, &context) {
+            basic_pool.0.stop(worker.id, &mut context);
             commands.entity(entity).despawn();
         }
     }
 }
 
 #[derive(Default)]
-struct EmptyChain;
+struct VolumeChain {
+    volume: VolumeNode,
+}
 
-impl FxChain for EmptyChain {
+impl FxChain for VolumeChain {
     fn construct_and_connect(
         &mut self,
         sampler_node_id: firewheel::node::NodeID,
@@ -225,9 +271,84 @@ impl FxChain for EmptyChain {
             .map(|i| (i, i))
             .collect::<Vec<_>>();
 
-        cx.connect(sampler_node_id, dst_node_id, &connections, true)
+        let volume_node = cx.add_node(
+            VolumeNode::default(),
+            Some(VolumeNodeConfig {
+                channels: sampler_num_channels,
+                ..Default::default()
+            }),
+        );
+
+        cx.connect(sampler_node_id, volume_node, &connections, true)
             .unwrap();
 
-        vec![]
+        cx.connect(volume_node, dst_node_id, &connections, true)
+            .unwrap();
+
+        vec![volume_node]
     }
+}
+
+fn apply_volume_fade(
+    mut workers: Query<(Entity, &VolumeWorker, &mut VolumeFade)>,
+    mut pool: ResMut<VolumePool>,
+    mut context: NonSendMut<FirewheelContext>,
+    mut commands: Commands,
+    time: Res<Time>,
+) -> Result {
+    let delta = time.delta();
+    for (entity, worker, mut fade) in &mut workers {
+        fade.timer.tick(delta);
+        let elapsed = fade.timer.elapsed_secs() / fade.timer.duration().as_secs_f32();
+
+        let chain = pool.0.fx_chain_mut(worker.id).ok_or("invalid worker ID")?;
+
+        let baseline = chain.fx_chain.volume;
+        chain.fx_chain.volume.volume =
+            Volume::Linear(fade.event.start.lerp(fade.event.end, elapsed));
+
+        chain.fx_chain.volume.diff(
+            &baseline,
+            Default::default(),
+            &mut context.event_queue(chain.node_ids[0]),
+        );
+
+        if fade.timer.finished() {
+            commands.entity(entity).remove::<VolumeFade>();
+        }
+    }
+
+    Ok(())
+}
+
+fn apply_spatial_fade(
+    mut workers: Query<(Entity, &SpatialWorker, &mut VolumeFade)>,
+    mut pool: ResMut<SpatialPool>,
+    mut context: NonSendMut<FirewheelContext>,
+    mut commands: Commands,
+    time: Res<Time>,
+) -> Result {
+    let delta = time.delta();
+    for (entity, worker, mut fade) in &mut workers {
+        fade.timer.tick(delta);
+        let elapsed = fade.timer.elapsed_secs() / fade.timer.duration().as_secs_f32();
+
+        let chain = pool.0.fx_chain_mut(worker.id).ok_or("invalid worker ID")?;
+
+        let baseline = chain.fx_chain.spatial_basic;
+        chain.fx_chain.spatial_basic.volume =
+            Volume::Linear(fade.event.start.lerp(fade.event.end, elapsed));
+
+        chain.fx_chain.spatial_basic.diff(
+            &baseline,
+            Default::default(),
+            &mut context.event_queue(chain.node_ids[0]),
+        );
+
+        if fade.timer.finished() {
+            commands.entity(entity).remove::<VolumeFade>();
+        }
+    }
+
+    Ok(())
 }

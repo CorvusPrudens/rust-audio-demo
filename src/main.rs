@@ -4,6 +4,7 @@ use bevy::{ecs::schedule::ExecutorKind, prelude::*};
 use clap::{Parser, ValueEnum};
 use rand::Rng;
 
+mod audio_events;
 mod chimes;
 mod engine;
 mod footsteps;
@@ -55,6 +56,7 @@ fn main() {
             footsteps::footsteps_plugin,
             music::music_plugin,
             textbox::textbox_plugin,
+            audio_events::audio_events_plugin,
         ));
 
     match args.engine {
@@ -67,13 +69,22 @@ fn main() {
     }
 
     app.add_systems(Startup, |mut commands: Commands| {
-        commands.trigger(AudioEvent {
+        commands.trigger(audio_events::AudioEvent {
             sample: "pine_trees.ogg",
             looping: true,
+            name: Some("pine"),
+            volume: 0.0,
             ..Default::default()
         });
 
-        commands.trigger(AudioEvent {
+        commands.trigger(audio_events::VolumeFadeEvent {
+            name: "pine",
+            start: 0.0,
+            end: 1.1,
+            seconds: 3.0,
+        });
+
+        commands.trigger(audio_events::AudioEvent {
             sample: "nightingale.ogg",
             looping: true,
             position: Some(Vec2::new(15.0, 10.0)),
@@ -81,7 +92,7 @@ fn main() {
         });
 
         commands.spawn(repeater::SoundRepeater::new(
-            || AudioEvent {
+            || audio_events::AudioEvent {
                 sample: "caw.ogg",
                 position: Some(Vec2::new(-15.0, 15.0)),
                 ..Default::default()
@@ -107,30 +118,4 @@ fn main() {
         schedule.set_executor_kind(ExecutorKind::SingleThreaded);
     })
     .run();
-}
-
-/// An event to queue playback.
-///
-/// An event-based approach allows us to write one
-/// sequence for all backends. Since these are observer-based
-/// events, there won't be any meaningful latency introduced.
-#[derive(Debug, Event, Clone)]
-pub struct AudioEvent {
-    pub sample: &'static str,
-    pub position: Option<Vec2>,
-    pub speed: f32,
-    pub volume: f32,
-    pub looping: bool,
-}
-
-impl Default for AudioEvent {
-    fn default() -> Self {
-        Self {
-            sample: "",
-            position: None,
-            speed: 1.0,
-            volume: 1.0,
-            looping: false,
-        }
-    }
 }

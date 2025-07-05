@@ -93,17 +93,17 @@ fn load_samples(mut commands: Commands, context: NonSend<FirewheelContext>) -> R
             .to_string_lossy()
             .into();
 
-        let mut loader = symphonium::SymphoniumLoader::new();
-        let Ok(source) = firewheel::load_audio_file(
-            &mut loader,
+        let Ok(data) = symphonium::SymphoniumLoader::new().load_f32(
             asset_entry.path(),
-            sample_rate,
+            Some(sample_rate.get()),
             Default::default(),
+            None,
         ) else {
             continue;
         };
 
-        let sample = ArcGc::new_unsized(|| Arc::new(source) as Arc<dyn SampleResource>);
+        let source = firewheel::sample_resource::decoded_f32_to_resource(data);
+        let sample = ArcGc::new_unsized(|| source);
 
         assets.insert(string_name, sample);
     }

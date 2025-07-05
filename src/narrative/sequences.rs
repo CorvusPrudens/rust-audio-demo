@@ -45,7 +45,7 @@ fn intro() -> impl IntoFragment<AudioSequence> {
         "The wind blows through the tall trees.",
         1.5,
         "You see someone walking towards you.".on_start(trigger(WalkEvent::Start(0.5))),
-        "Oh no<0.2>... [1]<1>he wants to <0.5>`talk to you`[shake 0.01]..."
+        "Oh no<0.2>... [1]<1>he wants to <0.5>`talk to you`[shake(1, 3)]..."
             .on_start(trigger(WalkEvent::Start(0.75)))
             .on_end(trigger(WalkEvent::Start(1.0))),
         1.5.on_end(trigger(WalkEvent::Stop)),

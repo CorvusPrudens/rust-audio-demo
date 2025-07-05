@@ -968,7 +968,7 @@ dependencies = [
 [[package]]
 name = "bevy_pretty_text"
 version = "0.1.0"
-source = "git+https://github.com/void-scape/bevy_pretty_text#d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba"
+source = "git+https://github.com/void-scape/bevy_pretty_text?rev=d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba#d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba"
 dependencies = [
  "bevy",
  "pretty_text",
@@ -1109,7 +1109,7 @@ dependencies = [
 [[package]]
 name = "bevy_sequence"
 version = "0.1.0"
-source = "git+https://github.com/CorvusPrudens/bevy_sequence.git#05eddfb2cc53d331123b5352f435b204a0b420be"
+source = "git+https://github.com/CorvusPrudens/bevy_sequence.git?rev=c484472f940176762b5967d0794e1aa9b5c8c9eb#c484472f940176762b5967d0794e1aa9b5c8c9eb"
 dependencies = [
  "bevy_app",
  "bevy_ecs",
@@ -1118,7 +1118,7 @@ dependencies = [
  "bevy_reflect",
  "bevy_time",
  "bevy_utils",
- "rand 0.9.1",
+ "rand 0.8.5",
  "serde",
  "variadics_please",
 ]
@@ -3759,7 +3759,7 @@ checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
 [[package]]
 name = "pretty_text"
 version = "0.1.0"
-source = "git+https://github.com/void-scape/bevy_pretty_text#d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba"
+source = "git+https://github.com/void-scape/bevy_pretty_text?rev=d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba#d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba"
 dependencies = [
  "bevy",
  "proc-macro2",
@@ -3770,7 +3770,7 @@ dependencies = [
 [[package]]
 name = "pretty_text_effects"
 version = "0.1.0"
-source = "git+https://github.com/void-scape/bevy_pretty_text#d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba"
+source = "git+https://github.com/void-scape/bevy_pretty_text?rev=d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba#d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba"
 dependencies = [
  "bevy",
  "pretty_text",
@@ -3781,7 +3781,7 @@ dependencies = [
 [[package]]
 name = "pretty_text_macros"
 version = "0.1.0"
-source = "git+https://github.com/void-scape/bevy_pretty_text#d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba"
+source = "git+https://github.com/void-scape/bevy_pretty_text?rev=d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba#d6a3ce3b122a3ec4f94a05ef62701cd661ef13ba"
 dependencies = [
  "bevy_macro_utils",
  "pretty_text",

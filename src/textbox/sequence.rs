@@ -140,12 +140,14 @@ where
         let id = commands
             .spawn(bevy_sequence::fragment::Leaf)
             .insert_begin_down(move |event, world| {
-                let string = world.run_system(system).unwrap();
+                let string = world.run_system(system)?;
 
                 world.send_event(FragmentEvent {
                     id: event.id,
                     data: AudioSequence::Text(string),
                 });
+
+                Ok(())
             })
             .id();
 

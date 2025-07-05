@@ -11,7 +11,7 @@ use firewheel::{
     sample_resource::SampleResource,
     sampler_pool::{FxChain, SamplerPool, SpatialBasicChain, WorkerID},
 };
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use walkdir::WalkDir;
 
 use crate::audio::{AudioEvent, VolumeFade};

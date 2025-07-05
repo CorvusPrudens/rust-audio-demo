@@ -38,21 +38,24 @@ and the effect of distance on amplitude differs between the engines.
 These differences are not especially important for the core evaluation,
 so I wouldn't focus too much on small differences in volume or spatialization.
 
-## Performance
-
-The `profiling` directory provides a performance trace from my Macbook M3
-laptop. The timings are taken from the Core Audio client execution time, so
-they should be fairly accurate.
-
-Over the course of the demo, Firewheel is around 3x faster than `rodio`.
-Keep in mind that, to my knowledge, the integration of `rodio` in this
-crate is much more favorable than `bevy_audio`, while Firewheel's is less
-favorable than `bevy_seedling`. In other words, it is easy to tune
-Firewheel for even greater performance given a nice, higher-level API.
-
 ### Global volume
 
 `rodio` 0.20 does not provide an easy way to assert a global volume without
 interacting with all the sinks, so I opted _not_ to provide a way
 to do that in the demo. To adjust the volume, you'll have to rely on
 adjusting your system volume for now.
+
+## Performance
+
+The `profiling` directory provides a performance trace from my Macbook M3
+laptop. The timings are taken from the Core Audio client execution time, so
+they should be fairly accurate.
+
+![Firewheel profiling results](https://github.com/CorvusPrudens/rust-audio-demo/blob/master/profiling/firewheel.png)
+![rodio profiling results](https://github.com/CorvusPrudens/rust-audio-demo/blob/master/profiling/rodio.png)
+
+Over the course of the demo, Firewheel is around 3x faster than `rodio`.
+Keep in mind that, to my knowledge, the integration of `rodio` in this
+crate is much more favorable than `bevy_audio`, while Firewheel's is less
+favorable than `bevy_seedling`. In other words, it is easy to tune
+Firewheel for even greater performance given a nice, higher-level API.

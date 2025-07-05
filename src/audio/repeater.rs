@@ -7,6 +7,7 @@ pub fn repeater_plugin(app: &mut App) {
     app.add_systems(Update, handle_repeaters);
 }
 
+/// A simple utility for repeatedly playing sounds on an arbitrary schedule.
 #[derive(Component)]
 pub struct SoundRepeater {
     timer: Timer,

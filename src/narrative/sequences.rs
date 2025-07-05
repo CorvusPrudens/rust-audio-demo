@@ -1,3 +1,13 @@
+//! All the demo's scripted sequences.
+//!
+//! The sequences are written with a behavior-tree-like framework I'm working on.
+//! The details of how it works aren't important, but it makes it easy to
+//! tightly integrated arbitrary events like audio queues with sequences
+//! of dialog (or anything else, really).
+//!
+//! Nothing about the sequences changes between engines, so any differences
+//! are down to how the engines are integrated and their implementation details.
+
 use bevy::{color::palettes, prelude::*, time::Stopwatch};
 use bevy_pretty_text::style::StyleAppExt;
 use bevy_sequence::prelude::{FragmentExt, IntoFragment, spawn_root};
@@ -7,7 +17,6 @@ use crate::{
         AudioEvent, VolumeFadeEvent,
         chimes::{ChimesEnable, ChimesTimer},
         footsteps::WalkEvent,
-        music::MusicEvent,
     },
     textbox::sequence::{AudioSequence, CharacterFragment, despawn_textbox, dynamic},
 };
@@ -35,18 +44,11 @@ fn intro() -> impl IntoFragment<AudioSequence> {
         "The moon peeks behind the clouds.",
         "The wind blows through the tall trees.",
         1.5,
-        "You see someone walking towards you.".on_start(trigger(WalkEvent { volume: 0.5 })),
+        "You see someone walking towards you.".on_start(trigger(WalkEvent::Start(0.5))),
         "Oh no<0.2>... [1]<1>he wants to <0.5>`talk to you`[shake 0.01]..."
-            .on_start(|mut commands: Commands| {
-                // Toggle off and back on again.
-                commands.trigger(WalkEvent::default());
-                commands.trigger(WalkEvent { volume: 0.75 });
-            })
-            .on_end(|mut commands: Commands| {
-                commands.trigger(WalkEvent::default());
-                commands.trigger(WalkEvent { volume: 1.0 });
-            }),
-        1.5.on_end(trigger(WalkEvent::default())),
+            .on_start(trigger(WalkEvent::Start(0.75)))
+            .on_end(trigger(WalkEvent::Start(1.0))),
+        1.5.on_end(trigger(WalkEvent::Stop)),
         1.5,
         "Hey there!".stranger().on_end(|mut commands: Commands| {
             commands.spawn(AsterWatch {
@@ -59,7 +61,7 @@ fn intro() -> impl IntoFragment<AudioSequence> {
         1.0,
         "You can't think of an excuse, [0.5]so unfortunately you have to accept."
             .narrator()
-            .on_end(trigger(WalkEvent { volume: 1.0 })),
+            .on_end(trigger(WalkEvent::Start(1.0))),
         3.0,
     )
 }
@@ -68,7 +70,15 @@ fn creek() -> impl IntoFragment<AudioSequence> {
     (
         "My name's `Aster|yellow`.[1] Pleased to meet you!"
             .stranger()
-            .on_end(trigger(MusicEvent)),
+            // queue the music!
+            .on_end(trigger(AudioEvent {
+                sample: "aster.ogg",
+                volume: 0.52,
+                speed: 0.80,
+                looping: true,
+                name: Some("music"),
+                ..Default::default()
+            })),
         2.5,
         "Aster runs his hand absent-mindedly though some chimes."
             .narrator()
@@ -82,7 +92,7 @@ fn creek() -> impl IntoFragment<AudioSequence> {
             seconds: 5.0,
         })),
         3.0,
-        "Don't you love the sound of pine trees in a light breeze?".aster(),
+        "Don't you love the sound of pine trees in the wind?".aster(),
         "It almost sounds like<0.2>...[0.5]<1> I don't know,[0.5] a big[0.33] river or something.",
         4.0.on_start(|mut commands: Commands| {
             let name = "creek";
@@ -109,8 +119,8 @@ fn creek() -> impl IntoFragment<AudioSequence> {
                 seconds: 5.0,
             });
         })
-        .on_end(trigger(WalkEvent::default())),
-        "Oh look![1] A `little`[wavy] river!".aster(),
+        .on_end(trigger(WalkEvent::Stop)),
+        "Oh look![1] A `little`[wave] river!".aster(),
         "Aster deftly crosses the stream,[0.5] prancing between the little rocks.".narrator(),
         1.0,
         "Now it's your turn.[1]<0.5> `Oh man...`[shake]",
@@ -121,7 +131,7 @@ fn creek() -> impl IntoFragment<AudioSequence> {
         })),
         0.7,
         "Oh no!".aster(),
-        "Naturally, you slipped on the last rock.[1] Aster helps pull you out."
+        "Naturally, you slipped on the last rock.[0.5] Aster helps pull you out."
             .narrator()
             .on_end(trigger(VolumeFadeEvent {
                 name: "creek",
@@ -143,7 +153,7 @@ fn end() -> impl IntoFragment<AudioSequence> {
                 ..Default::default()
             })),
         1.5,
-        "He hands you a towel.".narrator(),
+        "He fishes around in his bag for a moment,[0.5] and hands you a towel.".narrator(),
         "You dry yourself off, wondering what kind of contingencies Aster's planning for."
             .on_start(trigger(AudioEvent {
                 sample: "towel.ogg",
@@ -173,7 +183,6 @@ fn end() -> impl IntoFragment<AudioSequence> {
         }),
         3.0,
         "Well,[1] you had best head home too.",
-        2.0,
         "(That's all! You can also mess with the chimes by pressing C.)".on_start(
             |mut commands: Commands| {
                 commands.spawn(ChimesEnable);
@@ -182,12 +191,14 @@ fn end() -> impl IntoFragment<AudioSequence> {
     )
 }
 
+/// A convenience HOF for triggering events.
 fn trigger<E: Event + Clone>(event: E) -> impl Fn(Commands) + Send + Sync + 'static {
     move |mut commands: Commands| {
         commands.trigger(event.clone());
     }
 }
 
+/// I thought this would be a cute gag.
 #[derive(Component)]
 struct AsterWatch {
     timer: Stopwatch,

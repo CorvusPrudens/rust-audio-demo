@@ -8,9 +8,12 @@ pub fn footsteps_plugin(app: &mut App) {
     app.add_observer(toggle_walking);
 }
 
-#[derive(Event, Default, Clone)]
-pub struct WalkEvent {
-    pub volume: f32,
+/// The walk event allows us to control footsteps, which are really
+/// just a [`SoundRepeater`].
+#[derive(Event, Clone)]
+pub enum WalkEvent {
+    Start(f32),
+    Stop,
 }
 
 #[derive(Component)]
@@ -32,13 +35,15 @@ fn toggle_walking(
     walking: Query<Entity, With<Footsteps>>,
     mut commands: Commands,
 ) {
-    match walking.single() {
-        Ok(walking) => {
-            commands.entity(walking).despawn();
-        }
-        Err(_) => {
-            let mut last_sound = FOOTSTEPS[0];
-            let volume = trigger.volume;
+    if let Ok(walking) = walking.single() {
+        commands.entity(walking).despawn();
+    }
+
+    match *trigger {
+        WalkEvent::Start(volume) => {
+            let mut rng = rand::thread_rng();
+            let mut last_sound = *FOOTSTEPS.choose(&mut rng).unwrap();
+
             let mut next_sound = move || {
                 let mut rng = rand::thread_rng();
 
@@ -61,7 +66,6 @@ fn toggle_walking(
             };
 
             commands.trigger(next_sound());
-            // commands.trigger(MusicEvent);
 
             commands.spawn((
                 Footsteps,
@@ -73,5 +77,6 @@ fn toggle_walking(
                 }),
             ));
         }
+        WalkEvent::Stop => {}
     }
 }

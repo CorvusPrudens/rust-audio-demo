@@ -1,5 +1,5 @@
 use bevy::{prelude::*, sprite::Anchor, text::TextBounds};
-use bevy_pretty_text::prelude::*;
+use bevy_pretty_text::{access::GlyphReader, prelude::*};
 use bevy_sequence::{
     fragment::{DataLeaf, event::InsertBeginDown},
     prelude::*,
@@ -30,11 +30,21 @@ pub fn sequence_plugin(app: &mut App) {
     .add_observer(observe_typewriter);
 }
 
+/// In this observer, we play a short sample for every revealed character
+/// in the textbox.
 fn observe_typewriter(
-    _: Trigger<GlyphRevealed>,
+    trigger: Trigger<GlyphRevealed>,
     mut commands: Commands,
     character: Res<Character>,
-) {
+    reader: GlyphReader,
+) -> Result {
+    let char = reader.read(trigger.0)?;
+
+    // We'll skip emitting sounds for spaces.
+    if char == " " {
+        return Ok(());
+    }
+
     let mut rng = rand::thread_rng();
 
     commands.trigger(AudioEvent {
@@ -43,6 +53,8 @@ fn observe_typewriter(
         volume: 0.5,
         ..Default::default()
     });
+
+    Ok(())
 }
 
 #[derive(Resource)]

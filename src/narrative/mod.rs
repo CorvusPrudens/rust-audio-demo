@@ -12,6 +12,8 @@ pub fn narrative_plugin(app: &mut App) {
 }
 
 fn startup(mut commands: Commands) {
+    let fade_in_time = 2.5;
+
     commands.trigger(AudioEvent {
         sample: "pine_trees.ogg",
         looping: true,
@@ -20,18 +22,28 @@ fn startup(mut commands: Commands) {
         ..Default::default()
     });
 
+    // We fade in the ambience for a nice startup vibe
     commands.trigger(VolumeFadeEvent {
         name: "pine",
         start: 0.0,
         end: 1.1,
-        seconds: 3.0,
+        seconds: fade_in_time,
     });
 
     commands.trigger(AudioEvent {
         sample: "nightingale.ogg",
         looping: true,
         position: Some(Vec2::new(15.0, 10.0)),
+        volume: 0.0,
+        name: Some("nightingale"),
         ..Default::default()
+    });
+
+    commands.trigger(VolumeFadeEvent {
+        name: "nightingale",
+        start: 0.0,
+        end: 0.9,
+        seconds: fade_in_time,
     });
 
     commands.spawn(SoundRepeater::new(

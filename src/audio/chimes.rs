@@ -8,9 +8,11 @@ pub fn chimes_plugin(app: &mut App) {
     app.add_systems(Update, (trigger_chimes, hit_chimes).chain());
 }
 
-#[derive(Component)]
-pub struct ChimesEnable;
-
+/// The chimes are a procedural effect, playing a set of randomly
+/// selected, spatialized chime samples.
+///
+/// The volume of the samples is reduced for every chime, and once
+/// below a threshold, the effect is halted.
 #[derive(Component)]
 pub struct ChimesTimer {
     initial: bool,
@@ -19,6 +21,9 @@ pub struct ChimesTimer {
     position: Vec2,
     played_samples: HashSet<usize>,
 }
+
+#[derive(Component)]
+pub struct ChimesEnable;
 
 const CHIMES: &[&str] = &[
     "chimes/chime-d1.ogg",

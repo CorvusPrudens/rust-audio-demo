@@ -1,15 +1,23 @@
+//! A suite of engine-agnostic audio utilities.
+//!
+//! The [`AudioEvent`] is the primary mechanism for playing samples.
+//! As an event, it needs no knowledge of the engine, and so we can
+//! easily compose tools on top of it. The event includes a number of useful
+//! parameters that all engines in this demo can provide.
+//!
+//! The [`VolumeFadeEvent`] is also a bit special, as each engine needs
+//! to handle it differently.
+
 use bevy::prelude::*;
 use std::time::Duration;
 
 pub mod chimes;
 pub mod footsteps;
-pub mod music;
 pub mod repeater;
 
 pub fn audio_plugin(app: &mut App) {
     app.add_plugins(chimes::chimes_plugin)
         .add_plugins(footsteps::footsteps_plugin)
-        .add_plugins(music::music_plugin)
         .add_plugins(repeater::repeater_plugin)
         .add_observer(observe_fade_event);
 }
@@ -42,6 +50,10 @@ impl Default for AudioEvent {
     }
 }
 
+/// A simple tween over sample volume.
+///
+/// Since each engine has different handles and synchronization methods,
+/// they have to handle tweening individually.
 #[derive(Event, Debug, Clone)]
 pub struct VolumeFadeEvent {
     /// The name of the sample handle to target.
